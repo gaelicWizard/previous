@@ -95,6 +95,8 @@ const char Memory_fileid[] = "Previous memory.c : " __DATE__ " " __TIME__;
 #define NEXT_RAM_BANK_SEL_C		0x01800000
 #define NEXT_RAM_BANK_SEL_T		0x06000000
 
+#define NEXT_RAM_MAX_SIZE		NEXT_RAM_BANK_MAX_T*N_BANKS
+
 uae_u32 NEXT_ram_bank_size;
 uae_u32 NEXT_ram_bank_mask;
 uae_u32 NEXT_ram_bank0_mask;
@@ -170,6 +172,9 @@ uae_u8*    NEXTRam        = NULL;
 uae_u8*    NEXTRom        = NULL;
 uae_u8*    NEXTIo         = NULL;
 
+/* Unused stuff */
+uae_u8 ce_banktype[65536], ce_cachable[65536];
+
 /* **** A dummy bank that only contains zeros **** */
 
 static uae_u32 dummy_lget(uaecptr addr)
@@ -213,7 +218,7 @@ static uae_u32 BusErrMem_lget(uaecptr addr)
 	if (illegal_mem)
 		write_log ("Bus error lget at %08lx\n", (long)addr);
 	
-	M68000_BusError(addr, 1);
+	M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, 0);
 	return 0;
 }
 
@@ -222,7 +227,7 @@ static uae_u32 BusErrMem_wget(uaecptr addr)
 	if (illegal_mem)
 		write_log ("Bus error wget at %08lx\n", (long)addr);
 	
-	M68000_BusError(addr, 1);
+	M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, 0);
 	return 0;
 }
 
@@ -231,7 +236,7 @@ static uae_u32 BusErrMem_bget(uaecptr addr)
 	if (illegal_mem)
 		write_log ("Bus error bget at %08lx\n", (long)addr);
 	
-	M68000_BusError(addr, 1);
+	M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, 0);
 	return 0;
 }
 
@@ -240,7 +245,7 @@ static void BusErrMem_lput(uaecptr addr, uae_u32 l)
 	if (illegal_mem)
 		write_log ("Bus error lput at %08lx\n", (long)addr);
 	
-	M68000_BusError(addr, 0);
+	M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, l);
 }
 
 static void BusErrMem_wput(uaecptr addr, uae_u32 w)
@@ -248,7 +253,7 @@ static void BusErrMem_wput(uaecptr addr, uae_u32 w)
 	if (illegal_mem)
 		write_log ("Bus error wput at %08lx\n", (long)addr);
 	
-	M68000_BusError(addr, 0);
+	M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, w);
 }
 
 static void BusErrMem_bput(uaecptr addr, uae_u32 b)
@@ -256,7 +261,7 @@ static void BusErrMem_bput(uaecptr addr, uae_u32 b)
 	if (illegal_mem)
 		write_log ("Bus error bput at %08lx\n", (long)addr);
 	
-	M68000_BusError(addr, 0);
+	M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, b);
 }
 
 
@@ -288,22 +293,22 @@ static uae_u32 mem_rom_bget(uaecptr addr)
 	return ROMmemory[addr];
 }
 
-static void mem_rom_lput(uaecptr addr, uae_u32 b)
+static void mem_rom_lput(uaecptr addr, uae_u32 l)
 {
 	illegal_trace(write_log ("Illegal ROMmem lput at %08lx\n", (long)addr));
-	M68000_BusError(addr, 0);
+	M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, l);
 }
 
-static void mem_rom_wput(uaecptr addr, uae_u32 b)
+static void mem_rom_wput(uaecptr addr, uae_u32 w)
 {
 	illegal_trace(write_log ("Illegal ROMmem wput at %08lx\n", (long)addr));
-	M68000_BusError(addr, 0);
+	M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, w);
 }
 
 static void mem_rom_bput(uaecptr addr, uae_u32 b)
 {
 	illegal_trace(write_log ("Illegal ROMmem bput at %08lx\n", (long)addr));
-	M68000_BusError(addr, 0);
+	M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, b);
 }
 
 
@@ -780,7 +785,7 @@ static uae_u32 mem_bmap_lget(uaecptr addr)
 {
 	if ((addr&NEXT_BMAP_MASK)>NEXT_BMAP_SIZE) {
 		write_log ("bmap bus error at %08lx PC=%08x\n", (long)addr,m68k_getpc());
-		M68000_BusError(addr, 0);
+		M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, 0);
 		return 0;
 	}
 	//write_log ("bmap lget at %08lx PC=%08x\n", (long)addr,m68k_getpc());
@@ -792,7 +797,7 @@ static uae_u32 mem_bmap_wget(uaecptr addr)
 {
 	if ((addr&NEXT_BMAP_MASK)>NEXT_BMAP_SIZE) {
 		write_log ("bmap bus error at %08lx PC=%08x\n", (long)addr,m68k_getpc());
-		M68000_BusError(addr, 0);
+		M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, 0);
 		return 0;
 	}
 	//write_log ("bmap wget at %08lx PC=%08x\n", (long)addr,m68k_getpc());
@@ -804,7 +809,7 @@ static uae_u32 mem_bmap_bget(uaecptr addr)
 {
 	if ((addr&NEXT_BMAP_MASK)>NEXT_BMAP_SIZE) {
 		write_log ("bmap bus error at %08lx PC=%08x\n", (long)addr,m68k_getpc());
-		M68000_BusError(addr, 0);
+		M68000_BusError(addr, BUS_ERROR_READ, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, 0);
 		return 0;
 	}
 	//write_log ("bmap bget at %08lx PC=%08x\n", (long)addr,m68k_getpc());
@@ -816,7 +821,7 @@ static void mem_bmap_lput(uaecptr addr, uae_u32 l)
 {
 	if ((addr&NEXT_BMAP_MASK)>NEXT_BMAP_SIZE) {
 		write_log ("bmap bus error at %08lx PC=%08x\n", (long)addr,m68k_getpc());
-		M68000_BusError(addr, 0);
+		M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_LONG, BUS_ERROR_ACCESS_DATA, l);
 	}
 	//write_log ("bmap lput at %08lx val=%x PC=%08x\n", (long)addr,l,m68k_getpc());
 	addr &= NEXT_BMAP_MASK;
@@ -827,7 +832,7 @@ static void mem_bmap_wput(uaecptr addr, uae_u32 w)
 {
 	if ((addr&NEXT_BMAP_MASK)>NEXT_BMAP_SIZE) {
 		write_log ("bmap bus error at %08lx PC=%08x\n", (long)addr,m68k_getpc());
-		M68000_BusError(addr, 0);
+		M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_WORD, BUS_ERROR_ACCESS_DATA, w);
 	}
 	//write_log ("bmap wput at %08lx val=%x PC=%08x\n", (long)addr,w,m68k_getpc());
 	addr &= NEXT_BMAP_MASK;
@@ -838,7 +843,7 @@ static void mem_bmap_bput(uaecptr addr, uae_u32 b)
 {
 	if ((addr&NEXT_BMAP_MASK)>NEXT_BMAP_SIZE) {
 		write_log ("bmap bus error at %08lx PC=%08x\n", (long)addr,m68k_getpc());
-		M68000_BusError(addr, 0);
+		M68000_BusError(addr, BUS_ERROR_WRITE, BUS_ERROR_SIZE_BYTE, BUS_ERROR_ACCESS_DATA, b);
 	}
 	//write_log ("bmap bput at %08lx val=%x PC=%08x\n", (long)addr,b,m68k_getpc());
 	addr &= NEXT_BMAP_MASK;
@@ -993,9 +998,9 @@ mem_put_func bank_bput[65536];
 const char* memory_init(int *nNewNEXTMemSize)
 {
     if(!(NEXTRam)) {
-        NEXTRam   = host_malloc_aligned(128*1024*1024);
-        NEXTVideo = host_malloc_aligned(2*1024*1024);
-        NEXTIo    = host_malloc_aligned(0x20000);
+        NEXTRam   = host_malloc_aligned(NEXT_RAM_MAX_SIZE);
+        NEXTVideo = host_malloc_aligned(NEXT_VRAM_COLOR_SIZE);
+        NEXTIo    = host_malloc_aligned(NEXT_IO_SIZE);
         NEXTRom   = host_malloc_aligned(NEXT_EPROM_SIZE);
     }
 
@@ -1200,12 +1205,13 @@ const char* memory_init(int *nNewNEXTMemSize)
         ROMmemory[25] = crc & 0xFF;
     }
 	
-	{
-		int i;
-		for (i=0;i<sizeof(NEXTVideo);i++) NEXTVideo[i]=0;
-		for (i=0;i<sizeof(NEXTRam);i++) NEXTRam[i]=0;
-		for (i=0;i<sizeof(NEXTIo);i++) NEXTIo[i]=0;
+	if (ConfigureParams.System.bColor) {
+		for (i=0;i<NEXT_VRAM_COLOR_SIZE;i++) NEXTVideo[i]=0;
+	} else {
+		for (i=0;i<NEXT_VRAM_COLOR_SIZE;i++) NEXTVideo[i]=0xFF;
 	}
+	for (i=0;i<NEXT_RAM_MAX_SIZE;i++) NEXTRam[i]=0;
+	for (i=0;i<NEXT_IO_SIZE;i++) NEXTIo[i]=0;
 	
 	IoMem_Init();
 	
@@ -1233,8 +1239,4 @@ void map_banks (addrbank *bank, int start, int size) {
         put_mem_bank (bank_bput, bnr << 16, bank->bput);
     }
 	return;
-}
-
-void memory_hardreset (void)
-{
 }

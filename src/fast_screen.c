@@ -213,7 +213,6 @@ static int repainter(void* unused) {
     
     Uint32 r, g, b, a;
     
-    sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     SDL_RenderSetLogicalSize(sdlRenderer, width, height);
     
     uiTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, width, height);
@@ -353,9 +352,15 @@ void Screen_Init(void) {
             if(r.x >= 0 && SDL_GetNumVideoDisplays() == 1) x = r.x + 8;
         }
     }
-    sdlWindow  = SDL_CreateWindow(PROG_NAME, x, SDL_WINDOWPOS_UNDEFINED, width, height, 0);
+    sdlWindow  = SDL_CreateWindow(PROG_NAME, x, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_ALLOW_HIGHDPI);
     if (!sdlWindow) {
         fprintf(stderr,"Failed to create window: %s!\n", SDL_GetError());
+        exit(-1);
+    }
+
+    sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!sdlRenderer) {
+        fprintf(stderr,"Failed to create renderer: %s!\n", SDL_GetError());
         exit(-1);
     }
 

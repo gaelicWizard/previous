@@ -487,8 +487,8 @@ void i860_cpu_device::init(void) {
         for(int i = 2; i < 32; i += 2) {
             FLOAT32 hi = get_fregval_s(i+1);
             FLOAT32 lo = get_fregval_s(i+0);
-            if((*(UINT32*)&hi) != (0x00234567 | (i<<23))) {err = 10100+i; goto error;}
-            if((*(UINT32*)&lo) !=  0x89ABCDEF)            {err = 10100+i; goto error;}
+            if((*(UINT32*)&hi) != (UINT32)(0x00234567 | (i<<23))) {err = 10100+i; goto error;}
+            if((*(UINT32*)&lo) != (UINT32) 0x89ABCDEF)            {err = 10100+i; goto error;}
         }
         for(int i = 1; i < 16; i++) {
             if(m_fregs[i*8+7] != i)    {err = 10200+i; goto error;}
@@ -574,12 +574,12 @@ const char* i860_cpu_device::reports(double realTime, double hostTime) {
     } else {
         if(dVT == 0) dVT = 0.0001;
         sprintf(m_report, "i860:{MIPS=%.1f icache_hit=%lld%% tlb_hit=%lld%% icach_inval/s=%.0f tlb_inval/s=%.0f intr/s=%0.f}",
-                               (m_insn_decoded / (dVT*1000*1000)),
-                               m_icache_hit+m_icache_miss == 0 ? 0 : (100 * m_icache_hit) / (m_icache_hit+m_icache_miss) ,
-                               m_tlb_hit+m_tlb_miss       == 0 ? 0 : (100 * m_tlb_hit)    / (m_tlb_hit+m_tlb_miss),
-                               (m_icache_inval)/dVT,
-                               (m_tlb_inval)/dVT,
-                               (m_intrs)/dVT
+                               (float) (m_insn_decoded / (dVT*1000*1000)),
+                               m_icache_hit+m_icache_miss == 0 ? 0LL : (100LL * m_icache_hit) / (m_icache_hit+m_icache_miss) ,
+                               m_tlb_hit+m_tlb_miss       == 0 ? 0LL : (100LL * m_tlb_hit)    / (m_tlb_hit+m_tlb_miss),
+                               (float) (m_icache_inval)/dVT,
+                               (float) (m_tlb_inval)/dVT,
+                               (float) (m_intrs)/dVT
                                );
         
         m_insn_decoded  = 0;

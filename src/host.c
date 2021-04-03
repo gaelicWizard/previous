@@ -43,13 +43,13 @@ static double       perfFrequency;
 static Uint64       pauseTimeStamp;
 static bool         osDarkmatter;
 
-static inline double real_time() {
+static inline double real_time(void) {
     double rt  = (SDL_GetPerformanceCounter() - perfCounterStart);
     rt        /= perfFrequency;
     return rt;
 }
 
-void host_reset() {
+void host_reset(void) {
     perfCounterStart  = SDL_GetPerformanceCounter();
     pauseTimeStamp    = perfCounterStart;
     perfFrequency     = SDL_GetPerformanceFrequency();
@@ -89,7 +89,7 @@ void host_blank(int slot, int src, bool state) {
     }
     
     // check first 4 bytes of version string in darkmatter/daydream kernel
-    osDarkmatter = get_long(0x04000246) == do_get_mem_long(DARKMATTER);
+    osDarkmatter = get_long(0x04000246) == do_get_mem_long((Uint8*)DARKMATTER);
 }
 
 bool host_blank_state(int slot, int src) {
@@ -256,7 +256,23 @@ int host_thread_wait(thread_t* thread) {
   SDL_WaitThread(thread, &status);
   return status;
 }
-                
+
+mutex_t* host_mutex_create(void) {
+    return SDL_CreateMutex();
+}
+
+void host_mutex_lock(mutex_t* mutex) {
+    SDL_LockMutex(mutex);
+}
+
+void host_mutex_unlock(mutex_t* mutex) {
+    SDL_UnlockMutex(mutex);
+}
+
+void host_mutex_destroy(mutex_t* mutex) {
+    SDL_DestroyMutex(mutex);
+}
+
 int host_num_cpus() {
   return  SDL_GetCPUCount();
 }
