@@ -251,6 +251,10 @@ Previous v2.3:
   > Fixes bug that caused sporadic power-on test failures and crashes.
   > Fixes bug that prevented Previous from starting with SDL > 2.0.12.
 
+Previous v2.4 (unreleased):
+  > Improves performance and accuracy of FSINCOS.
+  > Fixes bug that caused slow disk access when running Mac OS.
+
 
  7) Running Previous
  -------------------

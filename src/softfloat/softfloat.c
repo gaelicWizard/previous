@@ -3425,6 +3425,7 @@ floatx80 floatx80_rem( floatx80 a, floatx80 b, uint64_t *q, flag *s, float_statu
 }
 #endif // End of modification
 
+
 #ifdef SOFTFLOAT_68K // 08-01-2017: Added for Previous
 /*----------------------------------------------------------------------------
  | Returns the modulo remainder of the extended double-precision floating-point
@@ -3514,6 +3515,7 @@ floatx80 floatx80_mod( floatx80 a, floatx80 b, uint64_t *q, flag *s, float_statu
     
 }
 #endif // end of addition for Previous
+
 
 /*----------------------------------------------------------------------------
 | Returns the square root of the extended double-precision floating-point
